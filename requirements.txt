@@ -1,0 +1,5 @@
+pyautogui
+pygetwindow
+termcolor
+art
+colorama

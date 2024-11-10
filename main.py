@@ -31,7 +31,7 @@ def get_window():
     windows = next(
         (
             pg.getWindowsWithTitle(opt)
-            for opt in ["TelegramDesktop"]
+            for opt in ["TelegramDesktop", "64Gram", "AyuGram", "telegram-desktop"]
             if pg.getWindowsWithTitle(opt)
         ),
         None,

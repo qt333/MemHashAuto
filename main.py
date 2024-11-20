@@ -101,7 +101,7 @@ def main():
     script_info()
     
     cycle = 0
-    c = 0
+    c = 1
     # button_start_coord = (195, 463)
     # energy_status_pixel_coord = (171, 360)
     # full_energy_pixel_coord = (239, 163)
@@ -122,6 +122,7 @@ def main():
                 # if detected_full_energy_status(screenshot, rect, full_energy_pixel_coord):
                 if detected_full_energy_status(screenshot, rect):
                     print(f'Started | Starting mining №{c}')
+                    time.sleep(random.uniform(1,3))
                     # click_start_button(screenshot, rect, button_start_coord)
                     click_start_button(screenshot, rect)
                     # cycle += 1

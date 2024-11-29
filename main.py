@@ -9,6 +9,18 @@ import ctypes
 import random
 import sys
 from math import ceil
+from loguru import logger
+
+def logging_setup():
+    format_info = "<green>{time:HH:mm:ss.SS}</green> | <blue>{level}</blue> | <level>{message}</level>"
+    logger.remove()
+
+    logger.add(sys.stdout, colorize=True, format=format_info, level="INFO")
+    logger.add("memhash.log", rotation="50 MB", compression="zip", format=format_info, level="TRACE")
+    # if config.USE_TG_BOT:
+    #     logger.add(lambda msg: send_log_to_telegram(msg), format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}", level="INFO")
+
+logging_setup()
 
 def script_info(name: str = "MemHashAuto"):
     init() 
@@ -78,11 +90,31 @@ def detected_low_energy_status(screen, rect):
 
 def detected_full_energy_status(screen, rect):
     width, height = screen.size
-    full_energy_color = (175, 253, 181)
+    # full_energy_color = (175, 253, 181)
     screen_x = rect[0] + ceil(width * 0.5945)
     screen_y = rect[1] + ceil(height * 0.2289)
     R, G, B = pyautogui.pixel(screen_x, screen_y)
-    if full_energy_color == (R, G, B):
+    # if full_energy_color == (R, G, B):
+    energy_range = (130 <= R <= 220) and (150 <= G <= 255) and (150 <= B <= 255)
+    if energy_range:
+        return True
+    else:
+        return False
+
+def detected_partial_energy_status(screen, rect, step):
+    width, height = screen.size
+    # full_energy_color = (175, 253, 181)
+    # partial_energy_color = (159, 179, 241) #blue
+    # partial_energy_color = (177, 183, 253) #blue
+    #(140, 175, 229) blue3 
+    screen_x = rect[0] + ceil(width * 0.5945) - step
+    screen_y = rect[1] + ceil(height * 0.2289)
+    R, G, B = pyautogui.pixel(screen_x, screen_y)
+    # blue_range_0 = (150 <= R <= 180) and (170 <= G < 190) and (230 <= B <= 255)
+    # blue_range_1 = (170 <= R <= 190) and (170 <= G < 220) and (200 <= B <= 235)
+    energy_range = (130 <= R <= 220) and (150 <= G <= 255) and (150 <= B <= 255)
+    # print(screen_x, screen_y, (R, G, B))
+    if energy_range:
         return True
     else:
         return False
@@ -101,42 +133,70 @@ def main():
     script_info()
     
     cycle = 0
-    c = 1
+    c = 0
     # button_start_coord = (195, 463)
     # energy_status_pixel_coord = (171, 360)
     # full_energy_pixel_coord = (239, 163)
     # full_energy_color = (175, 253, 181) #green
     window = get_window()
     if not window:
-        print(f"{colored('Window not found!', color='red')}")
+        logger.info(f"{colored('Window not found!', color='red')}")
         return
+    logger.info(f"{colored(f'Window found {window.title}!', color='white')}")
+    logger.info(f"{colored(f'Mining will start automatically in a few seconds!', color='white')}")
     rect = get_rect(window)
     screenshot = capture_screenshot(rect)
     try:
+        time.sleep(3)
+        #initial cycle
         while True:
-            time.sleep(2)
             window = get_window()
-            # print(window)
             if window:
                 rect = get_rect(window)
                 # if detected_full_energy_status(screenshot, rect, full_energy_pixel_coord):
-                if detected_full_energy_status(screenshot, rect):
-                    print(f'Started | Starting mining №{c}')
-                    time.sleep(random.uniform(1,3))
-                    # click_start_button(screenshot, rect, button_start_coord)
-                    click_start_button(screenshot, rect)
-                    # cycle += 1
-                    c += 1
-                # if detected_low_energy_status(screenshot, rect, energy_status_pixel_coord):
+                #NOTE search for energy pixel at 1st cycle. All other cycles will be proceed with full energy bar!
+                if not cycle and not detected_low_energy_status(screenshot, rect):
+                    for step in range(0, 111, 2):
+                        if detected_partial_energy_status(screenshot , rect, step):
+                            click_start_button(screenshot, rect)
+                            cycle += 1
+                            logger.info(f'Started | Starting mining №{cycle}')
+                            break
+                        time.sleep(0.05)
                 if detected_low_energy_status(screenshot, rect):
-                    # click_start_button(screenshot, rect, button_start_coord)
+                    time.sleep(0.1)
                     click_start_button(screenshot, rect)
-                    print('Stopped | Waiting for energy restore...')
-                    # cycle = 0
+                    logger.info('Stopped | Waiting for energy restore...')
+                    break #exit from initial cycle
+            else:
+                logger.info(f"{colored('Window not found!', color='red')}")
+                return
+            time.sleep(10)
 
-            time.sleep(20)
+        while True:
+            window = get_window()
+            if window:
+                rect = get_rect(window)
+                #start mining when energy bar is full
+                if detected_full_energy_status(screenshot, rect):
+                    cycle += 1
+                    logger.info(f'Mining | Starting mining cycle №{cycle}')
+                    time.sleep(random.uniform(1,3))
+                    click_start_button(screenshot, rect)
+                #stop mining when status low energy
+                if detected_low_energy_status(screenshot, rect):
+                    click_start_button(screenshot, rect)
+                    logger.info('Stopped | Waiting for energy restore...')
+            else:
+                logger.info(f"{colored('Window not found!', color='red')}")
+                return
+            time.sleep(30)
+            #printing every 5 minutes that script wait for enegry restore
+            if not (c % 10):
+                logger.info(f'Resting | Waiting for energy restore...')
+            c += 1
     except KeyboardInterrupt:
-        print("Process interrupted. Exiting...")
+        logger.info("Process interrupted. Exiting...")
         sys.exit(0)
 
 if __name__ == "__main__":

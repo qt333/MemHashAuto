@@ -3,3 +3,4 @@ pygetwindow
 termcolor
 art
 colorama
+loguru

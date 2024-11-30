@@ -134,6 +134,7 @@ def main():
     
     cycle = 0
     c = 0
+    status_mining = False
     # button_start_coord = (195, 463)
     # energy_status_pixel_coord = (171, 360)
     # full_energy_pixel_coord = (239, 163)
@@ -180,19 +181,21 @@ def main():
                 #start mining when energy bar is full
                 if detected_full_energy_status(screenshot, rect):
                     cycle += 1
+                    status_mining = True
                     logger.info(f'Mining | Starting mining cycle №{cycle}')
                     time.sleep(random.uniform(1,3))
                     click_start_button(screenshot, rect)
                 #stop mining when status low energy
                 if detected_low_energy_status(screenshot, rect):
                     click_start_button(screenshot, rect)
+                    status_mining = False
                     logger.info('Stopped | Waiting for energy restore...')
             else:
                 logger.info(f"{colored('Window not found!', color='red')}")
                 return
             time.sleep(30)
             #printing every 5 minutes that script wait for enegry restore
-            if not (c % 10):
+            if not (c % 10) and not status_mining:
                 logger.info(f'Resting | Waiting for energy restore...')
             c += 1
     except KeyboardInterrupt:
